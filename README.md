@@ -7,6 +7,10 @@ Twilio's Voice React Native SDK allows you to add real-time voice and PSTN calli
 - [API Reference](https://github.com/twilio/twilio-voice-react-native/blob/latest/docs/api/voice-react-native-sdk.md)
 - [Reference App](https://github.com/twilio/twilio-voice-react-native-app)
 
+## SimpleVox Fork Status
+
+This SimpleVox-maintained fork tracks upstream `twilio/twilio-voice-react-native`. The current release is based on upstream tag [`1.7.0`](https://github.com/twilio/twilio-voice-react-native/tree/1.7.0) (`b26e7829`). Future updates will continue to merge upstream tags into this branch before applying any fork-specific adjustments.
+
 Please check out the following if you are new to Twilio's Programmable Voice or React Native.
 
 - [Programmable Voice](https://www.twilio.com/docs/voice/sdks)
