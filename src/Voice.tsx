@@ -12,15 +12,18 @@ import { CallInvite } from './CallInvite';
 import { NativeEventEmitter, NativeModule, Platform } from './common';
 import { Constants } from './constants';
 import { InvalidArgumentError } from './error/InvalidArgumentError';
+import { InvalidStateError } from './error/InvalidStateError';
 import type { TwilioError } from './error/TwilioError';
 import { UnsupportedPlatformError } from './error/UnsupportedPlatformError';
 import { constructTwilioError } from './error/utility';
+import { PreflightTest } from './PreflightTest';
 import type { NativeAudioDeviceInfo } from './type/AudioDevice';
 import type { NativeCallInfo } from './type/Call';
 import type { NativeCallInviteInfo } from './type/CallInvite';
 import type { CallKit } from './type/CallKit';
 import type { CustomParameters, Uuid } from './type/common';
 import type { NativeVoiceEvent, NativeVoiceEventType } from './type/Voice';
+import { validatePreflightOptions } from './utility/preflightTestOptions';
 
 /**
  * Defines strict typings for all events emitted by {@link (Voice:class)
@@ -782,59 +785,100 @@ export class Voice extends EventEmitter {
   }
 
   /**
-   * Returns a boolean representing whether or not Android Full Screen
-   * notifications are enabled.
+   * Starts a PreflightTest.
    *
-   * @remarks
-   * Unsupported platforms:
-   *   - iOS
+   * The PreflightTest allows you to anticipate and troubleshoot end users'
+   * connectivity and bandwidth issues before or during Twilio Voice calls.
+   *
+   * The PreflightTest performs a test call to Twilio and provides a
+   * {@link (PreflightTest:namespace).Report} at the end. The report includes
+   * information about the end user's network connection (including jitter,
+   * packet loss, and round trip time) and connection settings.
+   *
+   * @example
+   * ```typescript
+   * import {
+   *   AudioCodecType,
+   *   IceTransportPolicy,
+   *   PreflightTest,
+   *   Voice,
+   * } from '@twilio/voice-react-native-sdk';
+   *
+   * const voice = new Voice();
+   *
+   * const preflightOptions = {
+   *   iceServers: [{
+   *     username: 'foo',
+   *     password: 'bar',
+   *     serverUrl: 'biffbazz',
+   *   }],
+   *   iceTransportPolicy: IceTransportPolicy.All,
+   *   preferredAudioCodecs: [{
+   *     type: AudioCodecType.Opus,
+   *     maxAverageBitrage: 128000,
+   *   }],
+   * };
+   *
+   * const token = '...';
+   *
+   * const preflightTest = await voice.runPreflight(token, preflightOptions);
+   *
+   * preflightTest.on(PreflightTest.Event.Completed, (report) => {
+   *   // handle the completed event and update your application ui to
+   *   // show report results and reveal any potential issues
+   * });
+   *
+   * preflightTest.on(PreflightTest.Event.Connected, () => {
+   *   // handle the connected event and update your application ui to
+   *   // show that the preflight test has started
+   * });
+   *
+   * preflightTest.on(PreflightTest.Event.Failed, (error) => {
+   *   // handle the failed event and update your application ui to
+   *   // show the error
+   * });
+   *
+   * preflightTest.on(PreflightTest.Event.QualityWarning, (currentWarnings, previousWarnings) => {
+   *   // handle the quality warning event and update your application ui
+   *   // show the warning or the warning cleared
+   * });
+   *
+   * preflightTest.on(PreflightTest.Event.Sample, (sample) => {
+   *   // handle the sample event and update your application ui
+   *   // show the progress
+   * });
+   * ```
    *
    * @returns
-   * A `Promise` that
-   * - Resolves `false` if either of the following is true:
-   *   - Full Screen Notifications are disabled in your app's configuration.
-   *     See `docs/disable-full-screen-notifications.md` for more info.
-   *   - The app was not granted Full Screen Notification permissions by the
-   *     operating system.
-   * - Resolves `true` if none of the above is true.
-   * - Rejects if the Android layer encountered an error.
+   * A Promise that:
+   * - Resolves with a {@link (PreflightTest:class)} object.
+   * - Rejects with a {@link TwilioErrors} if unable to perform a
+   *   {@link (PreflightTest:class)}.
    */
-  async isFullScreenNotificationEnabled(): Promise<boolean> {
-    switch (Platform.OS) {
-      case 'ios': {
-        throw new UnsupportedPlatformError(
-          `Unsupported platform "${Platform.OS}". This method is only supported on Android.`
-        );
-      }
-    }
+  async runPreflight(
+    accessToken: string,
+    options: PreflightTest.Options = {}
+  ): Promise<PreflightTest> {
+    const optionValidationResult = validatePreflightOptions(options);
+    if (optionValidationResult.status === 'error')
+      throw optionValidationResult.error;
 
-    return NativeModule.system_isFullScreenNotificationEnabled();
-  }
+    return await NativeModule.voice_runPreflight(accessToken, options)
+      .then((uuid: string): PreflightTest => {
+        return new PreflightTest(uuid);
+      })
+      .catch((error: any): never => {
+        if (typeof error.code === 'number' && error.message)
+          throw constructTwilioError(error.message, error.code);
 
-  /**
-   * Opens the Android System Settings app to attempt to request Full Screen
-   * Notification permissions.
-   *
-   * @remarks
-   * Unsupported platforms:
-   * - iOS
-   *
-   * @returns
-   * A `Promise` that
-   * - Resolves `void` if the Android System Settings app was opened.
-   * - Rejects if the Android system encountered an error while trying to open
-   *   the System Settings app.
-   */
-  async requestFullScreenNotificationPermission(): Promise<void> {
-    switch (Platform.OS) {
-      case 'ios': {
-        throw new UnsupportedPlatformError(
-          `Unsupported platform "${Platform.OS}". This method is only supported on Android.`
-        );
-      }
-    }
+        if (error.code === Constants.ErrorCodeInvalidStateError)
+          throw new InvalidStateError(error.message);
 
-    return NativeModule.system_requestFullScreenNotificationPermission();
+        if (error.code === Constants.ErrorCodeInvalidArgumentError)
+          throw new InvalidArgumentError(error.message);
+
+        throw error;
+      });
   }
 }
 
