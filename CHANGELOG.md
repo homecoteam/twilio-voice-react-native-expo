@@ -1,3 +1,11 @@
+1.7.0-svox.1 (October 8, 2025)
+=============================
+
+## Notes
+
+- Fork release synced with upstream `twilio/twilio-voice-react-native` tag `1.7.0`.
+- No fork-specific code changes beyond documentation and metadata updates.
+
 1.7.0 (October 8, 2025)
 =======================
 
