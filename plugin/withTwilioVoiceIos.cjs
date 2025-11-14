@@ -34,8 +34,13 @@ module.exports = function withTwilioVoiceIos(config) {
       const podfilePath = path.join(config.modRequest.platformProjectRoot, 'Podfile');
       let contents = fs.readFileSync(podfilePath, 'utf-8');
 
-      const podLine = `pod 'TwilioVoice', '~> 6.2'`;
-      if (!contents.includes(podLine)) {
+      const podLine = `pod 'TwilioVoice', '6.13.4'`;
+      const podRegex = /(^[ \t]*)pod 'TwilioVoice',.*$/m;
+
+      if (podRegex.test(contents)) {
+        contents = contents.replace(podRegex, (_, spaces) => `${spaces}${podLine}`);
+        fs.writeFileSync(podfilePath, contents);
+      } else if (!contents.includes(podLine)) {
         contents = contents.replace(
           /use_expo_modules!/,
           `use_expo_modules!\n  ${podLine}`

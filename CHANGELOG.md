@@ -52,7 +52,7 @@ This release provides Expo support for the Twilio Voice React Native SDK using a
 
 #### iOS
 
-- Updated the Twilio Voice iOS SDK version to `6.13.3`. This update fixes a Bluetooth device type deprecation warning when building with Xcode 26.
+- Updated the Twilio Voice iOS SDK version to `6.13.4`. This patch keeps the Bluetooth device type fix introduced in 6.13.3 and picks up Twilio's corrected `[TVOPreflightDelegate preflight:didCompleteWithReport:]` selector plus the updated `callQuality` string values from the 6.13.4 changelog.
 
 ## Fixes
 
